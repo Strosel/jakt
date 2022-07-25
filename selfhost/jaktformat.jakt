@@ -1,0 +1,80 @@
+// Copyright (c) 2022, Jannis Adamek <jannis.adamek@gmail.com>
+//
+// SPDX-License-Identifier: BSD-2-Clause
+
+import compiler {Compiler}
+import lexer {Lexer, Token}
+import utility {FilePath, ArgsParser}
+import parser {Parser, ParsedFunction, ParsedParameter}
+
+function usage(program_name: String) throws => format("usage: {} <filename>", program_name)
+
+struct Context {
+    indentation: i32
+}
+
+function param_list_to_string(parsed_parameters: [ParsedParameter]) throws -> String {
+    mut output = ""
+    for i in 0..parsed_parameters.size() {
+        let param = parsed_parameters[i]
+        let type = match param.variable.parsed_type {
+            Name(name, span) => name
+            GenericType(name, generic_parameters, span) => name
+            else => ""
+        }
+        output += format("{}: {}", param.variable.name, type)
+        if i < parsed_parameters.size()-1 {
+            output += ", "
+        }
+    }
+    return output
+}
+
+function function_to_string(parsed_function: ParsedFunction) throws -> String {
+    return format(
+        "function {}({}) {{ }}",
+        parsed_function.name,
+        param_list_to_string(parsed_parameters: parsed_function.params)
+    )
+}
+
+function main(args: [String]) {
+    mut compiler = Compiler(
+        files: []
+        file_ids: [:]
+        errors: []
+        current_file: None
+        current_file_contents: []
+        dump_lexer: true
+        dump_parser: false
+        ignore_parser_errors: false
+        debug_print: false
+        json_errors: false
+        dump_type_hints: false
+    )
+
+    let args_parser = ArgsParser::from_args(args)
+    let positional_arguments = args_parser.remaining_arguments()
+
+    let program_name = args[0]
+
+    if (positional_arguments.size() != 2) {
+        eprintln("{}", usage(program_name))
+        return 1
+    }
+
+    let file_path = args[1]
+
+    let main_file_id = compiler.get_file_id_or_register(FilePath::make(file_path))
+    let file_is_set = compiler.set_current_file(main_file_id)
+    if not file_is_set {
+        return 1
+    }
+
+    let tokens = Lexer::lex(compiler)
+    let result = Parser::parse(compiler, tokens)
+
+    for f in result.functions.iterator() {
+        println("{}", function_to_string(parsed_function: f))
+    }
+}
