@@ -120,6 +120,9 @@ enum Token {
     Yield(Span)
     Guard(Span)
 
+    // Important for formatting but ignored when compiling
+    Comment(content: String, span: Span)
+
     // Catch-all for failed parses
     Garbage(Span)
 
@@ -225,6 +228,7 @@ enum Token {
         While(span) => span
         Yield(span) => span
         Guard(span) => span
+        Comment(span) => span
         Garbage(span) => span
     }
 
@@ -360,9 +364,10 @@ struct Lexer {
     index: usize
     input: [u8]
     compiler: Compiler
+    include_whilespace: bool
 
-    function lex(compiler: Compiler) throws -> [Token] {
-        mut lexer = Lexer(index: 0, input: compiler.current_file_contents, compiler)
+    function lex(compiler: Compiler, include_whilespace: bool) throws -> [Token] {
+        mut lexer = Lexer(index: 0, input: compiler.current_file_contents, compiler, include_whilespace)
         mut tokens: [Token] = []
 
         for token in lexer {
@@ -838,6 +843,34 @@ struct Lexer {
         }
     }
 
+    function swallow_comment(mut this) {
+        while not .eof() {
+            let c = .peek()
+            .index++
+            if c == b'\n' {
+                break
+            }
+        }
+    }
+
+    function get_comment_token(mut this, start: usize) throws -> Token {
+        mut string_builder = StringBuilder::create()
+        mut start_of_comment = true
+        while not .eof() {
+            let c = .peek()
+            // Ignore all leading slashes
+            if not start_of_comment or c != b'/' {
+                start_of_comment = false
+                string_builder.append(c)
+            }
+            .index++
+            if c == b'\n' {
+                break
+            }
+        }
+        return Token::Comment(content: string_builder.to_string(), span: .span(start: start, end: .index))
+    }
+
     function lex_forward_slash(mut this) throws -> Token {
         let start = .index++
         if .peek() == b'=' {
@@ -846,15 +879,12 @@ struct Lexer {
         if .peek() != b'/' {
             return Token::ForwardSlash(.span(start, end: .index))
         }
-        // We're in a comment, swallow to end of line.
-        while not .eof() {
-            let c = .peek()
-            .index++
-            if c == b'\n' {
-                break
-            }
+        if .include_whilespace {
+            return .get_comment_token(start)
+        } else {
+            .swallow_comment()
+            return .next() ?? Token::Eof(.span(start: .index, end: .index))
         }
-        return .next() ?? Token::Eof(.span(start: .index, end: .index))
     }
 
     function lex_caret(mut this) -> Token {
