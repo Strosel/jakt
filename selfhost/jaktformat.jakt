@@ -5,12 +5,31 @@
 import compiler {Compiler}
 import lexer {Lexer, Token}
 import utility {FilePath, ArgsParser, panic}
-import parser {Parser, ParsedFunction, ParsedParameter, ParsedType}
+import parser {Parser, ParsedFunction, ParsedParameter, ParsedType, ParsedModuleImport, ImportName}
 
 function usage(program_name: String) throws => format("usage: {} <filename>", program_name)
 
 struct Context {
     indentation: u32
+}
+
+function module_import_to_string(parsed_module_import: ParsedModuleImport) throws -> String {
+    mut output = format("import {}", parsed_module_import.module_name.name)
+    if parsed_module_import.alias_name.has_value() {
+        output += format(" as {}", parsed_module_import.alias_name!)
+    }
+    if parsed_module_import.import_list.size() != 0 {
+        output += " { "
+        for i in 0..parsed_module_import.import_list.size() {
+            let import_name = parsed_module_import.import_list[i]
+            output += import_name.name
+            if i < parsed_module_import.import_list.size()-1 {
+                output += ", "
+            }
+        }
+        output += " }"
+    }
+    return output
 }
 
 function type_to_string(parsed_type: ParsedType) throws -> String => match parsed_type {
@@ -141,6 +160,9 @@ function main(args: [String]) {
     let tokens = Lexer::lex(compiler, include_whitespace: false)
     let result = Parser::parse(compiler, tokens)
 
+    for m in result.module_imports.iterator() {
+        println("{}", module_import_to_string(parsed_module_import: m))
+    }
     for f in result.functions.iterator() {
         println("{}", function_to_string(parsed_function: f))
     }
