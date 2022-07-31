@@ -115,11 +115,20 @@ function param_list_to_string(parsed_parameters: [ParsedParameter]) throws -> St
 }
 
 function function_to_string(parsed_function: ParsedFunction) throws -> String {
-    return format(
-        "function {}({}) {{ }}",
+    mut output = ""
+    
+    output += format(
+        "function {}({})",
         parsed_function.name,
         param_list_to_string(parsed_parameters: parsed_function.params)
     )
+
+    if parsed_function.can_throw {
+        output += " throws"
+    }
+    output += format(" -> {}", type_to_string(parsed_type: parsed_function.return_type))
+
+    return output
 }
 
 function main(args: [String]) {
