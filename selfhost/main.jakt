@@ -156,7 +156,7 @@ function main(args: [String]) {
         return 1
     }
 
-    let tokens = Lexer::lex(compiler)
+    let tokens = Lexer::lex(compiler, include_whilespace: false)
 
     if lexer_debug {
         for token in tokens.iterator() {
