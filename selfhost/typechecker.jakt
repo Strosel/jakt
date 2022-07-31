@@ -1615,7 +1615,7 @@ struct Typechecker {
             debug_name: "prelude"
         )
 
-        let tokens = Lexer::lex(compiler: .compiler)
+        let tokens = Lexer::lex(compiler: .compiler, include_whitespace: false)
 
         if .compiler.dump_lexer {
             for token in tokens.iterator() {
@@ -1644,7 +1644,7 @@ struct Typechecker {
         }
         defer .compiler.set_current_file(old_file_id)
 
-        let tokens = Lexer::lex(compiler: .compiler)
+        let tokens = Lexer::lex(compiler: .compiler, include_whitespace: false)
 
         if .compiler.dump_lexer {
             for token in tokens.iterator() {

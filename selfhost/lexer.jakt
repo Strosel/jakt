@@ -364,10 +364,10 @@ struct Lexer {
     index: usize
     input: [u8]
     compiler: Compiler
-    include_whilespace: bool
+    include_whitespace: bool
 
-    function lex(compiler: Compiler, include_whilespace: bool) throws -> [Token] {
-        mut lexer = Lexer(index: 0, input: compiler.current_file_contents, compiler, include_whilespace)
+    function lex(compiler: Compiler, include_whitespace: bool) throws -> [Token] {
+        mut lexer = Lexer(index: 0, input: compiler.current_file_contents, compiler, include_whitespace)
         mut tokens: [Token] = []
 
         for token in lexer {
@@ -878,7 +878,7 @@ struct Lexer {
         if .peek() != b'/' {
             return Token::ForwardSlash(.span(start, end: .index))
         }
-        if .include_whilespace {
+        if .include_whitespace {
             return .get_comment_token(start)
         } else {
             .swallow_comment()
